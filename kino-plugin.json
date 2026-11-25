@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "apiVersion": 9,
   "entry": "plugin.js",
-  "author": "lordmacu",
+  "author": "xuper-plugin",
   "discoverable": false,
   "color": "#1a56db",
   "hosts": [
@@ -13,9 +13,17 @@
     "apis-live.ta2mnt200stayr2.cfd"
   ],
   "liveStreamHosts": "any",
-  "capabilities": ["channels", "home", "resolve"],
+  "capabilities": [
+    "channels",
+    "home",
+    "resolve"
+  ],
   "secrets": {
     "aes_key": "kino-sealed:v1:4-c83eEGtsTEuD-7op6lW0NR7K4mSKzNNSufZ3FdKkN5HPOhK2wRVI4jCUDTf5UzYJ2QMksGxCInRqrc07AycXZH3NOF2-7YNC0q7nxaEB_DeOgtBPODFoIbRElns3A",
-    "aes_iv":  "kino-sealed:v1:J5LkhDjuU-zUEHfvAbDnWps4jYcrf1jL1r6yObITQRMdpjIiBmESqEHGHayuh2I57gX7_BOOeH7wjXwuWsClzF93h88L7ZVHmyUbjYzqNQ"
+    "aes_iv": "kino-sealed:v1:J5LkhDjuU-zUEHfvAbDnWps4jYcrf1jL1r6yObITQRMdpjIiBmESqEHGHayuh2I57gX7_BOOeH7wjXwuWsClzF93h88L7ZVHmyUbjYzqNQ"
+  },
+  "signature": {
+    "authorKey": "681128d1e13e1110d1745beb6eb521354ea3cafcbbb6649968b27c6c643b7993",
+    "value": "237578e8f47f0f73144a703814585b34dbfd35e771220a799ce01fe1ff24d4994f90ca87191db2e88acc53171164915e17d51b319fcca9ee7302c71f921fda05"
   }
 }
