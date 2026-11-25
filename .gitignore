@@ -1,0 +1,8 @@
+# Signing keypair — NEVER commit
+*.pem
+.kino-*.json
+
+# SDK local (no forma parte del plugin)
+sdk/
+contract.json
+node_modules/

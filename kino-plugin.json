@@ -1,0 +1,21 @@
+{
+  "id": "rblive",
+  "name": "RBLive Deportes",
+  "version": "0.1.0",
+  "apiVersion": 9,
+  "entry": "plugin.js",
+  "author": "lordmacu",
+  "discoverable": false,
+  "color": "#1a56db",
+  "hosts": [
+    "apis-data-defra10.tcpwe138stya.ru",
+    "apis-data10.tcpwe138stya.ru",
+    "apis-live.ta2mnt200stayr2.cfd"
+  ],
+  "liveStreamHosts": "any",
+  "capabilities": ["channels", "home", "resolve"],
+  "secrets": {
+    "aes_key": "kino-sealed:v1:3j45tUctuhdpiDo3aqjBr4mVahsYnhT_Ix9tHVnq5mB5O5Fqw8bYXiHLDKJL7349WJre9wEsWV7Qq4PsPV2m8suBFR1ndtaHFJCbhkGp17YDEDEChguwr5y9mM0EnZc",
+    "aes_iv":  "kino-sealed:v1:WP4yQcNIfdLiWRY1f8Xhzw3fZTZWf0UpEUGmuFBJ-Um8vuXHp5FMWUcB9LayzZnkYjFYhIz0lDRqLanU9Yxa1hINZCUX1CifoTyNBNfdGw"
+  }
+}
