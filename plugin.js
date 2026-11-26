@@ -378,16 +378,21 @@ export async function resolve(ref) {
   const watchUrl = String(ref);
   if (!/^https:\/\//.test(watchUrl)) throw kino.error("not_found", "invalid ref");
 
-  kino.log(`[rblive] capture ${watchUrl}`);
-  const cap = await kino.browser.capture(watchUrl, {
-    match: "\\.m3u8",
-    timeoutMs: 24000,
-  });
+  kino.log(`[rblive] resolve ${watchUrl}`);
+  // sin "match": usa el patrón de medios por defecto (m3u8, mpd, mp4, /hls/…) para no perder nada.
+  const opts = { timeoutMs: 26000 };
+  if (kino.browser.captureAll) { opts.captureAll = true; opts.returnCookiesOnTimeout = true; }
+  const cap = await kino.browser.capture(watchUrl, opts) || {};
 
-  const media = (cap && cap.media) || [];
-  kino.log(`[rblive] capture media=${media.length} finalUrl=${cap && cap.finalUrl}`);
+  const media = cap.media || [];
+  const reqs  = cap.requests || [];
+  kino.log(`[rblive] cap finalUrl=${cap.finalUrl} media=${media.length} reqs=${reqs.length} timedOut=${cap.timedOut}`);
+  media.slice(0, 5).forEach((m, i) => kino.log(`[rblive]  media[${i}] mime=${m.mime} ${String(m.url).slice(0, 120)}`));
+  if (!media.length) reqs.slice(0, 10).forEach((r, i) => kino.log(`[rblive]  req[${i}] ${String(r.url).slice(0, 120)}`));
+
   const hls = media.find((m) => /\.m3u8/i.test(m.url)) || media[0];
   if (!hls) throw kino.error("unavailable", "no se capturó stream (¿partido fuera de línea?)");
+  kino.log(`[rblive] OK ${String(hls.url).slice(0, 120)}`);
 
   return {
     url:  hls.url,
