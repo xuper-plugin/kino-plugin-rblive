@@ -163,6 +163,24 @@ function subStr(sub, field) {
   return v instanceof Uint8Array ? bytes2str(v) : "";
 }
 
+/** Primera URL http(s) dentro de un sub-mensaje protobuf (recursivo). */
+function firstHttp(buf, depth) {
+  if (!(buf instanceof Uint8Array) || (depth || 0) > 3) return "";
+  const sub = parseFlat(buf);
+  for (const vals of Object.values(sub)) {
+    for (const v of vals) {
+      if (v instanceof Uint8Array) {
+        const s = bytes2str(v);
+        // quitar el sufijo de redimensión del CDN (…png!w80) para tener resolución completa
+        if (s.startsWith("http")) return s.split(/[\s"']/)[0].replace(/!.*$/, "");
+        const deep = firstHttp(v, (depth || 0) + 1);
+        if (deep) return deep;
+      }
+    }
+  }
+  return "";
+}
+
 /** URL de la página del partido en el sitio (el WebView la reproduce). */
 function matchWatchUrl(m) {
   const seg    = sportSegment(m.sport);
@@ -204,7 +222,10 @@ function parseLive(data) {
           if (s20 && /^[a-z0-9-]+$/.test(s20)) { teamsSlug = s20; leagueSlug = subStr(sub, 21); }
         }
       }
-      matches.push({ matchId: mId, sport, title, teamsSlug, leagueSlug });
+      // logo: el de la competición (f10) y, si no, el del primer equipo (f30)
+      let image = firstHttp((f[10] || [])[0]);
+      if (!image) for (const x of (f[30] || [])) { image = firstHttp(x); if (image) break; }
+      matches.push({ matchId: mId, sport, title, teamsSlug, leagueSlug, image });
     }
 
     for (const vals of Object.values(f)) {
@@ -241,10 +262,11 @@ export async function home() {
     id:    "live-now",
     title: "⚽ En Vivo Ahora",
     items: channels.items.map((ch) => ({
-      id:    ch.id,
-      ref:   ch.ref,
-      title: ch.title,
-      kind:  "live",
+      id:     ch.id,
+      ref:    ch.ref,
+      title:  ch.title,
+      kind:   "live",
+      ...(ch.logo ? { poster: ch.logo } : {}),
     })),
   }];
 }
@@ -275,6 +297,7 @@ function matchToItem(m) {
     ref:        matchWatchUrl(m),
     title:      `${icon} ${title}`,
     categoryId: sportCat(m.sport),
+    logo:       m.image || undefined,
   };
 }
 
