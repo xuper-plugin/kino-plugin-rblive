@@ -2,11 +2,16 @@
 // Todo vía WebView real (kino.browser), porque:
 //  - el API protobuf llega como application/json y Kino lo corrompe al leerlo como texto;
 //  - el endpoint de streams devuelve "oklp" a clientes no nativos.
-// Lista:  kino.browser.page scrapea los enlaces de partido de la página en vivo.
-// Reproduce: kino.browser.capture abre la página del partido y captura el .m3u8.
+// kino.browser SOLO corre en primer plano (mientras la persona usa la app). Por eso:
+//  - liveChannels (primer plano) scrapea la lista con kino.browser.page y la cachea;
+//  - home (warm-up en segundo plano) lee SOLO de la caché, sin navegador;
+//  - resolve captura el .m3u8 con kino.browser.capture.
 
 const SITE = "https://www.rbtvplus18.website";
 const LIVE_PAGE = SITE + "/es/";
+
+const CACHE_KEY = "live-items";
+const CACHE_TTL = 10 * 60 * 1000; // 10 min
 
 const SPORT_ICON = {
   football: "⚽", basketball: "🏀", tennis: "🎾", baseball: "⚾", cricket: "🏏",
@@ -25,8 +30,23 @@ function titleFromSlug(slug) {
     .trim();
 }
 
-/** Scrapea la página en vivo y devuelve los partidos como items de Kino. */
-async function liveList() {
+// ─── Caché ───────────────────────────────────────────────────────────────────
+
+function cachedItems() {
+  try {
+    const raw = kino.storage.get(CACHE_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr : [];
+  } catch { return []; }
+}
+
+function saveItems(items) {
+  try { kino.storage.set(CACHE_KEY, JSON.stringify(items), { ttlMs: CACHE_TTL }); } catch {}
+}
+
+// ─── Scrape de la lista en vivo (primer plano) ───────────────────────────────
+
+async function scrapeLive() {
   const page = await kino.browser.page(LIVE_PAGE, {
     waitFor: "/es/[a-z0-9-]+/[a-z0-9-]+-[0-9]{6,}/",
     timeoutMs: 22000,
@@ -50,16 +70,16 @@ async function liveList() {
     });
   }
 
-  kino.log(`[rblive] live page html=${html.length} finalUrl=${page.finalUrl} items=${items.length}`);
+  kino.log(`[rblive] scrape html=${html.length} finalUrl=${page.finalUrl} items=${items.length}`);
   return items;
 }
 
 // ─── Exports ─────────────────────────────────────────────────────────────────
 
-/** home(): partidos en vivo en una fila. */
+/** home(): warm-up en segundo plano → solo caché (el navegador está bloqueado aquí). */
 export async function home() {
-  const items = await liveList();
-  if (!items.length) throw kino.error("unavailable", "no hay partidos en vivo ahora");
+  const items = cachedItems();
+  if (!items.length) return [];
   return [{
     id:    "live-now",
     title: "⚽ En Vivo Ahora",
@@ -72,11 +92,17 @@ export async function liveCategories() {
   return [{ id: "all", name: "Todos" }];
 }
 
-/** liveChannels(): lista de partidos en vivo. */
+/** liveChannels(): primer plano → scrape con navegador, con fallback a caché. */
 export async function liveChannels(cursor) {
-  const items = await liveList();
-  if (!items.length) throw kino.error("unavailable", "no hay partidos en vivo ahora");
-  return { items };
+  try {
+    const items = await scrapeLive();
+    if (items.length) { saveItems(items); return { items }; }
+  } catch (e) {
+    kino.log(`[rblive] scrape falló: ${e && e.message}`);
+  }
+  const cached = cachedItems();
+  if (cached.length) return { items: cached };
+  throw kino.error("unavailable", "no se pudo cargar la lista en vivo");
 }
 
 /**
