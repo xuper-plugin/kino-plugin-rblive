@@ -1,8 +1,8 @@
 {
   "id": "rblive",
   "name": "RBLive Deportes",
-  "version": "0.4.4",
-  "apiVersion": 9,
+  "version": "0.5.0",
+  "apiVersion": 14,
   "entry": "plugin.js",
   "author": "xuper-plugin",
   "discoverable": false,
@@ -17,10 +17,23 @@
   "capabilities": [
     "channels",
     "home",
-    "resolve"
+    "resolve",
+    "screen"
   ],
+  "screen": {
+    "label": "En Vivo",
+    "icon": "play",
+    "menuOpens": "screen",
+    "opensFrom": [
+      "menu"
+    ],
+    "every": {
+      "ms": 60000,
+      "event": "tick"
+    }
+  },
   "signature": {
     "authorKey": "681128d1e13e1110d1745beb6eb521354ea3cafcbbb6649968b27c6c643b7993",
-    "value": "b2f863901fce522ee6c1b197a8e0128315c5d3df32ffd488612675ed5e83bb6d221fcfb12a3fe9e1762ce6120dbbe0063f62b4b6d952967e183d247632eec605"
+    "value": "af44a23173b8b26bc7597cf1dd479be35e25a7d46dffc34ad9fac9975709d53df7e6f9c9ce6d71a3580232dd75708b9fe4fe1adc36563e1978fbf8e8afb4e506"
   }
 }

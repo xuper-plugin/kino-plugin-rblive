@@ -369,3 +369,46 @@ export async function resolve(ref) {
     headers: hls.headers || {},
   };
 }
+
+// ─── Pantalla propia con auto-refresco + botón (capability "screen") ─────────
+
+async function screenItems(force) {
+  const matches = await fetchMatches(force);
+  return matches.slice(0, 100).map((m) => {
+    const it = matchToItem(m);
+    return { id: it.id, ref: it.ref, title: it.title, kind: "live" };
+  });
+}
+
+/** screen(): dibuja la lista en vivo con un botón "Actualizar". Los datos vienen del state. */
+export async function screen({ state }) {
+  const items = state && state.items;
+  const children = [
+    { type: "Row", gap: 8, children: [
+      { type: "Text", text: "⚽ En Vivo Ahora", style: "h3", flex: 1 },
+      { type: "ElevatedButton", labelText: "Actualizar", icon: "refresh", onPressed: { event: "refresh" } },
+    ] },
+  ];
+  if (state && state.note) children.push({ type: "Text", text: state.note, style: "caption", color: "muted" });
+  if (items == null) {
+    children.push({ type: "CircularProgressIndicator", text: "Cargando…" });
+  } else if (items.length === 0) {
+    children.push({ type: "emptyState", title: "Sin partidos en vivo ahora", icon: "live" });
+  } else {
+    children.push({ type: "titleGrid", items, columns: 3 });
+  }
+  return { type: "Column", padding: 12, gap: 12, children };
+}
+
+/** screenEvent(): open/tick cargan la lista; refresh fuerza; un tap en una tarjeta la reproduce. */
+export async function screenEvent({ name }) {
+  if (name === "open" || name === "tick") {
+    const items = await screenItems(false);
+    return { state: { items, note: `${items.length} en vivo` } };
+  }
+  if (name === "refresh") {
+    const items = await screenItems(true);
+    return { state: { items, note: `${items.length} en vivo · actualizado` }, toast: "Lista actualizada" };
+  }
+  return null;
+}
