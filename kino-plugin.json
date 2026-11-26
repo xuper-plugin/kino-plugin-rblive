@@ -1,11 +1,16 @@
 {
   "id": "rblive",
   "name": "RBLive Deportes",
-  "version": "0.7.2",
+  "version": "0.7.3",
   "apiVersion": 19,
   "entry": "plugin.js",
   "author": "xuper-plugin",
-  "discoverable": false,
+  "discoverable": true,
+  "description": "Deportes en vivo de RBLive: fútbol, basketball, tenis, hockey, cricket y más. Lista por deporte, buscador y reproducción directa.",
+  "categories": [
+    "live"
+  ],
+  "icon": "icon.png",
   "color": "#1a56db",
   "hosts": [
     "apis-data-defra10.tcpwe138stya.ru",
@@ -34,6 +39,6 @@
   },
   "signature": {
     "authorKey": "681128d1e13e1110d1745beb6eb521354ea3cafcbbb6649968b27c6c643b7993",
-    "value": "beda083af9e179c33b53a1cf6e9eacbabadc264270284f8d0f32262178c241d0dec207887f2d4ebe3949d384fdb30b818eb0c2c1f8f7d04efb2d0f37f2a55f0b"
+    "value": "cd981429236969dfe354476fe2f24e407fdab9e111d594f9429269f15f2a02bdeda309ec81d9f47dea673a3a9fae3db3f3e736436da892a4f0bff6af3a861106"
   }
 }
