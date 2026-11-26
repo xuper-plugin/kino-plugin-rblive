@@ -222,10 +222,18 @@ function parseLive(data) {
           if (s20 && /^[a-z0-9-]+$/.test(s20)) { teamsSlug = s20; leagueSlug = subStr(sub, 21); }
         }
       }
-      // logo: el de la competición (f10) y, si no, el del primer equipo (f30)
-      let image = firstHttp((f[10] || [])[0]);
-      if (!image) for (const x of (f[30] || [])) { image = firstHttp(x); if (image) break; }
-      matches.push({ matchId: mId, sport, title, teamsSlug, leagueSlug, image });
+      // logos de los equipos: campo 4 de cada PBDataTeam (f30[i].10). Vienen con el host viejo
+      // (tcrbg61levl.cfd, NXDOMAIN); teamLogo() lo cambia por el host actual.
+      const teamLogos = [];
+      for (const x of (f[30] || [])) {
+        if (!(x instanceof Uint8Array)) continue;
+        const tf = parseFlat(x);
+        const tv = tf[10] && tf[10][0] instanceof Uint8Array ? parseFlat(tf[10][0]) : null;
+        if (!tv) continue;
+        const lg = tv[4] && tv[4][0] instanceof Uint8Array ? bytes2str(tv[4][0]) : "";
+        teamLogos.push(lg);
+      }
+      matches.push({ matchId: mId, sport, title, teamsSlug, leagueSlug, homeLogo: teamLogos[0] || "", awayLogo: teamLogos[1] || "" });
     }
 
     for (const vals of Object.values(f)) {
@@ -265,11 +273,19 @@ function shortText(str, max) {
   return str.length > max ? str.slice(0, max - 1).trim() + "…" : str;
 }
 
+const LOGO_HOST = "https://logos1.tcpwe138stya.ru";
 /**
- * Imagen de tarjeta: placa de color (por deporte) con el TÍTULO del partido (equipos), en líneas
- * cortas para que se lea grande. El nombre completo igual aparece debajo de la tarjeta.
+ * Corrige la URL del logo del equipo: el protobuf trae el host viejo (tcrbg61levl.cfd, que ya no
+ * resuelve). Se reemplaza por el host actual (LOGO_HOST) y se quita el sufijo de resize (!w80)
+ * para traer el logo a resolución completa. La ruta (/aelogo/... o /linlogo/...) se conserva.
  */
-function matchImage(m) {
+function teamLogo(raw) {
+  const m = String(raw || "").match(/https?:\/\/[^/]+(\/[^\s"']+)/);
+  return m ? LOGO_HOST + m[1].replace(/!.*$/, "") : "";
+}
+
+/** Placa de color con el título (cuando el equipo no tiene logo real). */
+function placaTitulo(m) {
   const bg = SPORT_COLOR[m.sport] || "334155";
   const raw = m.title || sportName(m.sport);
   const vs = raw.split(/\s+vs\s+/i);
@@ -277,6 +293,21 @@ function matchImage(m) {
     ? `${shortText(vs[0], 16)}\nvs\n${shortText(vs[1], 16)}`
     : shortText(raw, 22);
   return `https://placehold.co/400x600/${bg}/ffffff/png?text=${encodeURIComponent(text)}`;
+}
+
+/**
+ * Imagen de tarjeta: el logo real del equipo local, encajado con su proporción (sin estirarlo a 2:3)
+ * sobre un fondo del color del deporte, vía el proxy de imágenes images.weserv.nl. Si el equipo no
+ * tiene logo, una placa de color con el título del partido.
+ */
+function matchImage(m) {
+  const bg = SPORT_COLOR[m.sport] || "334155";
+  const home = teamLogo(m.homeLogo);
+  if (home) {
+    const src = "ssl:" + home.replace(/^https?:\/\//, "");
+    return `https://images.weserv.nl/?url=${encodeURIComponent(src)}&w=400&h=600&fit=contain&cbg=${bg}&pad=24`;
+  }
+  return placaTitulo(m);
 }
 
 // ─── Exports ─────────────────────────────────────────────────────────────────
@@ -421,18 +452,54 @@ export async function resolve(ref) {
 
 async function screenItems(force) {
   const matches = await fetchMatches(force);
-  return matches.slice(0, 120).map((m) => {
-    const it = matchToItem(m);
-    return { id: it.id, ref: it.ref, title: it.title, kind: "live", poster: it.logo, cat: it.categoryId, catName: sportName(m.sport) };
-  });
+  return matches.slice(0, 120).map((m) => ({
+    id:       `m${m.matchId}`,
+    ref:      matchWatchUrl(m),
+    teams:    m.title || `Match ${m.matchId}`,
+    homeLogo: teamLogo(m.homeLogo),
+    awayLogo: teamLogo(m.awayLogo),
+    icon:     sportLabel(m.sport),
+    cat:      sportCat(m.sport),
+    catName:  sportName(m.sport),
+  }));
 }
 
 /** Filtra los items por categoría (tab) y texto de búsqueda. */
 function visibleItems(items, tab, q) {
   let list = items || [];
   if (tab && tab !== "all") list = list.filter((it) => it.cat === tab);
-  if (q) { const ql = q.toLowerCase(); list = list.filter((it) => (it.title || "").toLowerCase().includes(ql)); }
+  if (q) { const ql = q.toLowerCase(); list = list.filter((it) => (it.teams || "").toLowerCase().includes(ql)); }
   return list;
+}
+
+/** Una fila (lista) con los dos escudos lado a lado, el "vs", los equipos y el deporte; al tocar, reproduce. */
+function matchRow(it) {
+  const logo = (url) => {
+    const n = { type: "Image", aspect: "1:1", fit: "contain", width: 48, height: 48,
+      fallback: { type: "Text", text: it.icon, textAlign: "center", style: "h3" } };
+    if (url) n.url = url;
+    return n;
+  };
+  return {
+    type: "Card",
+    variant: "filled",
+    padding: 12,
+    onTap: { go: { play: { ref: it.ref, kind: "live", title: it.teams } } },
+    children: [{
+      type: "Row",
+      crossAxisAlignment: "center",
+      gap: 12,
+      children: [
+        logo(it.homeLogo),
+        { type: "Text", text: "vs", color: "muted", style: "caption" },
+        logo(it.awayLogo),
+        { type: "Column", flex: 1, gap: 4, children: [
+          { type: "Text", text: it.teams, style: "h5", maxLines: 2 },
+          { type: "Text", text: `${it.icon} ${it.catName}`, color: "muted", style: "caption" },
+        ] },
+      ],
+    }],
+  };
 }
 
 /** screen(): Scaffold con AppBar fusionado a la barra de Kino (una sola barra), tabs en la barra,
@@ -478,7 +545,7 @@ export async function screen({ state }) {
     if (!vis.length) {
       children.push({ type: "emptyState", title: q ? "Sin resultados" : "Sin partidos en vivo", icon: "live" });
     } else {
-      children.push({ type: "titleGrid", items: vis.map((it) => ({ id: it.id, ref: it.ref, title: it.title, kind: "live", poster: it.poster })), columns: 3 });
+      children.push({ type: "ListView", flex: 1, columns: 1, items: vis.map(matchRow) });
     }
     body = { type: "Column", padding: 12, gap: 12, children };
   }
