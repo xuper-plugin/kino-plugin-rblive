@@ -380,7 +380,7 @@ export async function resolve(ref) {
 
   kino.log(`[rblive] resolve ${watchUrl}`);
   // sin "match": usa el patrón de medios por defecto (m3u8, mpd, mp4, /hls/…) para no perder nada.
-  const opts = { timeoutMs: 26000 };
+  const opts = { timeoutMs: 24000 };
   if (kino.browser.captureAll) { opts.captureAll = true; opts.returnCookiesOnTimeout = true; }
   const cap = await kino.browser.capture(watchUrl, opts) || {};
 
