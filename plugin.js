@@ -261,6 +261,7 @@ async function liveChannelsImpl(cursor) {
   // 1. Tokens sfver
   const tokens = await fetchTokens();
   const tokenLive = tokens["/api/match/live"];
+  kino.log(`[rblive][dbg] tokens=${JSON.stringify(Object.keys(tokens))} liveLen=${tokenLive ? tokenLive.length : 0}`);
   if (!tokenLive) throw kino.error("unavailable", "no sfver token for match/live");
 
   // 2. match/live
@@ -269,11 +270,13 @@ async function liveChannelsImpl(cursor) {
   if (!r.ok) throw kino.error("unavailable", `match/live ${r.status}`);
 
   const raw  = bodyBytes(r);
+  const hex0 = Array.from(raw.slice(0, 8)).map((b) => b.toString(16).padStart(2, "0")).join("");
+  kino.log(`[rblive][dbg] match/live raw=${raw.length} first8=${hex0} ct=${r.headers ? r.headers["content-type"] : "?"} ce=${r.headers ? r.headers["content-encoding"] : "?"}`);
   const data = pbData(raw);
   if (!data) throw kino.error("unavailable", "match/live response invalid");
 
   const matches = parseLive(data);
-  kino.log(`[rblive] ${matches.length} matches en vivo`);
+  kino.log(`[rblive] ${matches.length} matches en vivo (dataLen=${data.length})`);
 
   const items = matches.slice(0, 80).map((m) => {
     const icon  = sportLabel(m.sport);
