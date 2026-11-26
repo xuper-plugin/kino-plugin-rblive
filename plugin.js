@@ -253,6 +253,18 @@ const SPORT_NAME = {
 function sportName(sport) { return SPORT_NAME[sport] || "Otros"; }
 function sportCat(sport) { return SPORT_NAME[sport] ? String(sport) : "otros"; }
 
+// Color por deporte para la tarjeta genérica (los logos reales viven en un CDN que no resuelve).
+const SPORT_COLOR = {
+  1:"16a34a", 2:"ea580c", 3:"65a30d", 4:"dc2626", 6:"0891b2", 7:"7c3aed",
+  8:"b45309", 9:"9333ea", 10:"a16207", 11:"2563eb", 12:"db2777", 13:"0d9488",
+  14:"be123c", 15:"0284c7", 16:"ca8a04", 17:"15803d", 18:"78350f", 19:"4f46e5",
+};
+/** Imagen genérica de tarjeta: una placa de color con el nombre del deporte (host público que sí carga). */
+function sportImage(sport) {
+  const bg = SPORT_COLOR[sport] || "334155";
+  return `https://placehold.co/400x600/${bg}/ffffff/png?text=${encodeURIComponent(sportName(sport))}`;
+}
+
 // ─── Exports ─────────────────────────────────────────────────────────────────
 
 const MATCHES_CACHE_KEY = "matches-cache";
@@ -316,7 +328,7 @@ function matchToItem(m) {
     ref:        matchWatchUrl(m),
     title:      `${icon} ${title}`,
     categoryId: sportCat(m.sport),
-    logo:       m.image || undefined,
+    logo:       sportImage(m.sport),
   };
 }
 
@@ -376,7 +388,7 @@ async function screenItems(force) {
   const matches = await fetchMatches(force);
   return matches.slice(0, 120).map((m) => {
     const it = matchToItem(m);
-    return { id: it.id, ref: it.ref, title: it.title, kind: "live", cat: it.categoryId, catName: sportName(m.sport) };
+    return { id: it.id, ref: it.ref, title: it.title, kind: "live", poster: it.logo, cat: it.categoryId, catName: sportName(m.sport) };
   });
 }
 
