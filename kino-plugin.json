@@ -1,16 +1,18 @@
 {
   "id": "rblive",
   "name": "RBLive Deportes",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "apiVersion": 9,
   "entry": "plugin.js",
   "author": "xuper-plugin",
   "discoverable": false,
   "color": "#1a56db",
   "hosts": [
+    "apis-data-defra10.tcpwe138stya.ru",
+    "apis-data10.tcpwe138stya.ru",
     "www.rbtvplus18.website"
   ],
-  "browser": "pages",
+  "browser": true,
   "liveStreamHosts": "any",
   "capabilities": [
     "channels",
@@ -19,6 +21,6 @@
   ],
   "signature": {
     "authorKey": "681128d1e13e1110d1745beb6eb521354ea3cafcbbb6649968b27c6c643b7993",
-    "value": "ba8c7b1d3c942443ca41c3b6d13ed8d4dfb376caf3ce780963228bd80e09f24acc56b3b2b8055f182ec5b691b87875a482a9efd8548ea56d81880d1427554d01"
+    "value": "c9e70caa7b143d022da07a461dd249b96f3d1fdb6f5069e048d5e1b00db05c8122c9e56cbcc707e00e29a1645136add6f593d409a69dda6146dc856d1f4b960b"
   }
 }
