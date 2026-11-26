@@ -370,45 +370,87 @@ export async function resolve(ref) {
   };
 }
 
-// ─── Pantalla propia con auto-refresco + botón (capability "screen") ─────────
+// ─── Pantalla propia: tabs de categoría + buscador + auto-refresco + botón ───
 
 async function screenItems(force) {
   const matches = await fetchMatches(force);
-  return matches.slice(0, 100).map((m) => {
+  return matches.slice(0, 120).map((m) => {
     const it = matchToItem(m);
-    return { id: it.id, ref: it.ref, title: it.title, kind: "live" };
+    return { id: it.id, ref: it.ref, title: it.title, kind: "live", cat: it.categoryId, catName: sportName(m.sport) };
   });
 }
 
-/** screen(): dibuja la lista en vivo con un botón "Actualizar". Los datos vienen del state. */
+/** Filtra los items por categoría (tab) y texto de búsqueda. */
+function visibleItems(items, tab, q) {
+  let list = items || [];
+  if (tab && tab !== "all") list = list.filter((it) => it.cat === tab);
+  if (q) { const ql = q.toLowerCase(); list = list.filter((it) => (it.title || "").toLowerCase().includes(ql)); }
+  return list;
+}
+
+/** screen(): barra de búsqueda + tabs por deporte + grilla de partidos, con botón Actualizar. */
 export async function screen({ state }) {
-  const items = state && state.items;
+  const s = state || {};
+  const items = s.items;
+  const tab = s.tab || "all";
+  const q = s.q || "";
+
   const children = [
     { type: "Row", gap: 8, children: [
-      { type: "Text", text: "⚽ En Vivo Ahora", style: "h3", flex: 1 },
+      { type: "Text", text: "⚽ En Vivo", style: "h3", flex: 1 },
       { type: "ElevatedButton", labelText: "Actualizar", icon: "refresh", onPressed: { event: "refresh" } },
     ] },
+    { type: "TextField", key: "q", kind: "search", value: q, hint: "Buscar equipo o liga…",
+      onChanged: { event: "search" } },
   ];
-  if (state && state.note) children.push({ type: "Text", text: state.note, style: "caption", color: "muted" });
+
   if (items == null) {
     children.push({ type: "CircularProgressIndicator", text: "Cargando…" });
-  } else if (items.length === 0) {
-    children.push({ type: "emptyState", title: "Sin partidos en vivo ahora", icon: "live" });
+    return { type: "Column", padding: 12, gap: 12, children };
+  }
+
+  // tabs: Todos + un tab por deporte presente
+  const seen = new Set();
+  const tabs = [{ value: "all", label: "Todos" }];
+  for (const it of items) {
+    if (seen.has(it.cat)) continue;
+    seen.add(it.cat);
+    tabs.push({ value: it.cat, label: it.catName });
+  }
+  if (tabs.length > 2) {
+    children.push({ type: "TabBar", tabs, value: tabs.some((t) => t.value === tab) ? tab : "all",
+      onChanged: { event: "tab" } });
+  }
+
+  const vis = visibleItems(items, tab, q);
+  if (!vis.length) {
+    children.push({ type: "emptyState", title: q ? "Sin resultados" : "Sin partidos en vivo", icon: "live" });
   } else {
-    children.push({ type: "titleGrid", items, columns: 3 });
+    children.push({ type: "titleGrid", items: vis.map((it) => ({ id: it.id, ref: it.ref, title: it.title, kind: "live" })), columns: 3 });
   }
   return { type: "Column", padding: 12, gap: 12, children };
 }
 
-/** screenEvent(): open/tick cargan la lista; refresh fuerza; un tap en una tarjeta la reproduce. */
-export async function screenEvent({ name }) {
-  if (name === "open" || name === "tick") {
-    const items = await screenItems(false);
-    return { state: { items, note: `${items.length} en vivo` } };
+/**
+ * screenEvent(): open/tick cargan la lista (cache); refresh fuerza; tab/search ajustan los filtros
+ * conservando la lista. Un tap en una tarjeta reproduce (titleGrid kind:"live" → resolve).
+ */
+export async function screenEvent({ name, value, state }) {
+  const s = state || {};
+  let items = s.items;
+  let tab = s.tab || "all";
+  let q = s.q || "";
+
+  if (name === "tab") {
+    tab = String(value == null ? "all" : value);
+  } else if (name === "search") {
+    q = String(value == null ? "" : value);
+  } else {
+    items = await screenItems(name === "refresh"); // open / tick / refresh
   }
-  if (name === "refresh") {
-    const items = await screenItems(true);
-    return { state: { items, note: `${items.length} en vivo · actualizado` }, toast: "Lista actualizada" };
-  }
-  return null;
+  if (!items) items = await screenItems(false); // fallback si no llegó el state
+
+  const ans = { state: { items, tab, q } };
+  if (name === "refresh") ans.toast = "Lista actualizada";
+  return ans;
 }
