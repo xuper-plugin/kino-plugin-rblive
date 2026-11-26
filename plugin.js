@@ -255,24 +255,22 @@ function sportCat(sport) { return SPORT_NAME[sport] ? String(sport) : "otros"; }
 
 // ─── Exports ─────────────────────────────────────────────────────────────────
 
-/** home(): pantalla de inicio con los partidos en vivo como categorías. */
-export async function home() {
-  const channels = await liveChannelsImpl();
-  return [{
-    id:    "live-now",
-    title: "⚽ En Vivo Ahora",
-    items: channels.items.map((ch) => ({
-      id:     ch.id,
-      ref:    ch.ref,
-      title:  ch.title,
-      kind:   "live",
-      ...(ch.logo ? { poster: ch.logo } : {}),
-    })),
-  }];
-}
+const MATCHES_CACHE_KEY = "matches-cache";
+const MATCHES_TTL = 60 * 1000; // 60s: suaviza las múltiples llamadas (una por categoría) y refresca al rotar
 
-/** Descarga y parsea la lista de partidos en vivo (match/live protobuf). */
-async function fetchMatches() {
+/**
+ * Descarga y parsea los partidos en vivo, con caché corta en kino.storage.
+ * Kino llama liveCategories + liveChannels (una por categoría) casi a la vez: la caché
+ * evita N peticiones a match/live (y el 429). Al expirar, un fetch nuevo trae los partidos rotados.
+ * force=true ignora la caché (para el refresco manual).
+ */
+async function fetchMatches(force) {
+  if (!force) {
+    try {
+      const cached = kino.storage.get(MATCHES_CACHE_KEY);
+      if (cached) { const arr = JSON.parse(cached); if (Array.isArray(arr)) return arr; }
+    } catch {}
+  }
   const tokens = await fetchTokens();
   const tokenLive = tokens["/api/match/live"];
   if (!tokenLive) throw kino.error("unavailable", "no sfver token for match/live");
@@ -285,8 +283,29 @@ async function fetchMatches() {
   if (!data) throw kino.error("unavailable", "match/live response invalid");
 
   const matches = parseLive(data);
-  kino.log(`[rblive] ${matches.length} matches en vivo`);
+  kino.log(`[rblive] ${matches.length} matches en vivo (force=${!!force})`);
+  try { kino.storage.set(MATCHES_CACHE_KEY, JSON.stringify(matches), { ttlMs: MATCHES_TTL }); } catch {}
   return matches;
+}
+
+/** home(): pantalla de inicio con los partidos en vivo. */
+export async function home() {
+  const matches = await fetchMatches();
+  if (!matches.length) throw kino.error("unavailable", "no hay partidos en vivo ahora");
+  return [{
+    id:    "live-now",
+    title: "⚽ En Vivo Ahora",
+    items: matches.slice(0, 120).map((m) => {
+      const it = matchToItem(m);
+      return {
+        id:    it.id,
+        ref:   it.ref,
+        title: it.title,
+        kind:  "live",
+        ...(it.logo ? { poster: it.logo } : {}),
+      };
+    }),
+  }];
 }
 
 function matchToItem(m) {
@@ -315,16 +334,12 @@ export async function liveCategories() {
   return cats.length ? cats : [{ id: "otros", title: "Deportes", genre: "deportes" }];
 }
 
-/** liveChannels(): todos los partidos en vivo (Kino los agrupa por categoryId). */
-export async function liveChannels(cursor) {
-  return liveChannelsImpl(cursor);
-}
-
-async function liveChannelsImpl(cursor) {
+/** liveChannels({categoryId}): los partidos de ESA categoría (Kino la pide por deporte). */
+export async function liveChannels(arg) {
+  const categoryId = arg && arg.categoryId;
   const matches = await fetchMatches();
-  const items = matches.slice(0, 120).map(matchToItem);
-  if (!items.length) throw kino.error("unavailable", "no live matches right now");
-  return { items };
+  const list = categoryId ? matches.filter((m) => sportCat(m.sport) === categoryId) : matches;
+  return { items: list.slice(0, 200).map(matchToItem), next: null };
 }
 
 /**
