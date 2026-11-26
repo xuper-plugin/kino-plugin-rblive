@@ -484,7 +484,7 @@ function matchRow(it) {
     type: "Card",
     variant: "filled",
     padding: 12,
-    onTap: { go: { play: { ref: it.ref, kind: "live", title: it.teams } } },
+    onTap: { go: { play: { ref: it.ref, kind: "live", id: it.id, title: it.teams } } },
     children: [{
       type: "Row",
       crossAxisAlignment: "center",
@@ -545,7 +545,7 @@ export async function screen({ state }) {
     if (!vis.length) {
       children.push({ type: "emptyState", title: q ? "Sin resultados" : "Sin partidos en vivo", icon: "live" });
     } else {
-      children.push({ type: "ListView", flex: 1, columns: 1, items: vis.map(matchRow) });
+      children.push({ type: "ListView", flex: 1, columns: 1, gap: 12, items: vis.map(matchRow) });
     }
     body = { type: "Column", padding: 12, gap: 12, children };
   }
