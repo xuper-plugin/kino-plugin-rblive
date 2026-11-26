@@ -1,7 +1,7 @@
 {
   "id": "rblive",
   "name": "RBLive Deportes",
-  "version": "0.7.5",
+  "version": "0.7.6",
   "apiVersion": 19,
   "entry": "plugin.js",
   "author": "xuper-plugin",
@@ -30,8 +30,13 @@
     "icon": "play",
     "menuOpens": "screen",
     "opensFrom": [
-      "menu"
+      "menu",
+      "settings"
     ],
+    "settingsButton": {
+      "label": "Abrir En Vivo",
+      "labelEn": "Open Live"
+    },
     "every": {
       "ms": 60000,
       "event": "tick"
@@ -39,6 +44,6 @@
   },
   "signature": {
     "authorKey": "681128d1e13e1110d1745beb6eb521354ea3cafcbbb6649968b27c6c643b7993",
-    "value": "2239e740741d6826ac7d581b8f9fe0141b4c562b20ecde57e504685a52a3be498755c90c772a68348cad4a38938256d566d34c4fc6acf9a20822db3d319f880c"
+    "value": "f1b39a0fd6902d6915874ed4a84b0c978033b2d27ca9b4afec181a4c1576b0d3e2022d406c63958db502ed54ee15f5c87a4bf77d08b4553d7b4ce183ade4a505"
   }
 }

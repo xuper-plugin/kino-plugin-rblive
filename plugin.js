@@ -379,26 +379,42 @@ export async function resolve(ref) {
   if (!/^https:\/\//.test(watchUrl)) throw kino.error("not_found", "invalid ref");
 
   kino.log(`[rblive] resolve ${watchUrl}`);
-  // sin "match": usa el patrón de medios por defecto (m3u8, mpd, mp4, /hls/…) para no perder nada.
-  const opts = { timeoutMs: 24000 };
-  if (kino.browser.captureAll) { opts.captureAll = true; opts.returnCookiesOnTimeout = true; }
-  const cap = await kino.browser.capture(watchUrl, opts) || {};
 
-  const media = cap.media || [];
-  const reqs  = cap.requests || [];
-  kino.log(`[rblive] cap finalUrl=${cap.finalUrl} media=${media.length} reqs=${reqs.length} timedOut=${cap.timedOut}`);
-  media.slice(0, 5).forEach((m, i) => kino.log(`[rblive]  media[${i}] mime=${m.mime} ${String(m.url).slice(0, 120)}`));
-  if (!media.length) reqs.slice(0, 10).forEach((r, i) => kino.log(`[rblive]  req[${i}] ${String(r.url).slice(0, 120)}`));
+  // Hasta 2 intentos: algunos partidos cargan la página pero disparan el .m3u8 tarde
+  // (justo al límite del timeout). Sólo se reintenta si la página se movió (redirección o
+  // varias peticiones) pero no alcanzó a soltar el stream; un partido realmente fuera de
+  // línea no da señales y no vale la pena hacer esperar otros 24 s al usuario.
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    // sin "match": usa el patrón de medios por defecto (m3u8, mpd, mp4, /hls/…) para no perder nada.
+    const opts = { timeoutMs: 24000 };
+    if (kino.browser.captureAll) { opts.captureAll = true; opts.returnCookiesOnTimeout = true; }
+    const cap = await kino.browser.capture(watchUrl, opts) || {};
 
-  const hls = media.find((m) => /\.m3u8/i.test(m.url)) || media[0];
-  if (!hls) throw kino.error("unavailable", "no se capturó stream (¿partido fuera de línea?)");
-  kino.log(`[rblive] OK ${String(hls.url).slice(0, 120)}`);
+    const media = cap.media || [];
+    const reqs  = cap.requests || [];
+    kino.log(`[rblive] cap#${attempt} finalUrl=${cap.finalUrl} media=${media.length} reqs=${reqs.length} timedOut=${cap.timedOut}`);
+    media.slice(0, 5).forEach((m, i) => kino.log(`[rblive]  media[${i}] mime=${m.mime} ${String(m.url).slice(0, 120)}`));
 
-  return {
-    url:  hls.url,
-    mime: hls.mime || "application/x-mpegURL",
-    headers: hls.headers || {},
-  };
+    const hls = media.find((m) => /\.m3u8/i.test(m.url)) || media[0];
+    if (hls) {
+      kino.log(`[rblive] OK (intento ${attempt}) ${String(hls.url).slice(0, 120)}`);
+      return {
+        url:  hls.url,
+        mime: hls.mime || "application/x-mpegURL",
+        headers: hls.headers || {},
+      };
+    }
+
+    const movedOn = (cap.finalUrl && cap.finalUrl !== watchUrl) || reqs.length > 3;
+    if (attempt === 1 && cap.timedOut && movedOn) {
+      kino.log(`[rblive] reintento: la página cargó pero el stream no disparó a tiempo`);
+      continue;
+    }
+    reqs.slice(0, 10).forEach((r, i) => kino.log(`[rblive]  req[${i}] ${String(r.url).slice(0, 120)}`));
+    break;
+  }
+
+  throw kino.error("unavailable", "Este partido no tiene transmisión disponible todavía. Prueba con otro o vuelve cuando empiece.");
 }
 
 // ─── Pantalla propia: tabs de categoría + buscador + auto-refresco + botón ───
