@@ -239,17 +239,9 @@ export async function home() {
   }];
 }
 
-/** liveCategories(): categorías de deportes disponibles. */
+/** liveCategories(): categoría para la pestaña En Vivo nativa (Kino agrupa por categoryId). */
 export async function liveCategories() {
-  return [
-    { id: "0", name: "Todos" },
-    { id: "1", name: "Fútbol" },
-    { id: "2", name: "Basketball" },
-    { id: "3", name: "Baseball" },
-    { id: "4", name: "Tenis" },
-    { id: "5", name: "Voleibol" },
-    { id: "6", name: "Hockey" },
-  ];
+  return [{ id: "deportes", title: "Deportes", genre: "deportes" }];
 }
 
 /** liveChannels(): devuelve la lista de partidos en vivo ahora mismo. */
@@ -279,9 +271,10 @@ async function liveChannelsImpl(cursor) {
     const icon  = sportLabel(m.sport);
     const title = m.title || `Match ${m.matchId}`;
     return {
-      id:    `m${m.matchId}`,
-      ref:   matchWatchUrl(m),
-      title: `${icon} ${title}`,
+      id:         `m${m.matchId}`,
+      ref:        matchWatchUrl(m),
+      title:      `${icon} ${title}`,
+      categoryId: "deportes",
     };
   });
 
