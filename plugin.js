@@ -270,8 +270,12 @@ async function liveChannelsImpl(cursor) {
   if (!r.ok) throw kino.error("unavailable", `match/live ${r.status}`);
 
   const raw  = bodyBytes(r);
-  const hex0 = Array.from(raw.slice(0, 8)).map((b) => b.toString(16).padStart(2, "0")).join("");
-  kino.log(`[rblive][dbg] match/live raw=${raw.length} first8=${hex0} ct=${r.headers ? r.headers["content-type"] : "?"} ce=${r.headers ? r.headers["content-encoding"] : "?"}`);
+  // Diagnóstico: ¿los bytes binarios llegan intactos o corrompidos por decodificación de texto?
+  let fffd = 0;
+  for (let i = 0; i + 2 < raw.length; i++) if (raw[i] === 0xef && raw[i+1] === 0xbf && raw[i+2] === 0xbd) fffd++;
+  const topMap = Object.entries(parseFlat(raw)).map(([fn, vs]) =>
+    `f${fn}=${vs.map((v) => v instanceof Uint8Array ? `b${v.length}` : v).join(",")}`).join(" ");
+  kino.log(`[rblive][dbg] match/live raw=${raw.length} fffd=${fffd} top: ${topMap}`);
   const data = pbData(raw);
   if (!data) throw kino.error("unavailable", "match/live response invalid");
 
