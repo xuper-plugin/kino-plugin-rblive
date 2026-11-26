@@ -219,8 +219,18 @@ function parseLive(data) {
 }
 
 function sportLabel(sport) {
-  return { 1:"⚽", 2:"🏀", 3:"🎾", 4:"⚾", 6:"🏏", 8:"🏉", 9:"🏈", 11:"🏒", 13:"🏐", 16:"🤾", 17:"⛳" }[sport] || "🔴";
+  return { 1:"⚽", 2:"🏀", 3:"🎾", 4:"⚾", 6:"🏏", 7:"🏍", 8:"🏉", 9:"🏈", 10:"🏉",
+           11:"🏒", 12:"🏸", 13:"🏐", 14:"🥊", 15:"🚴", 16:"🤾", 17:"⛳", 18:"🎯", 19:"🏃" }[sport] || "🔴";
 }
+
+const SPORT_NAME = {
+  1:"Fútbol", 2:"Basketball", 3:"Tenis", 4:"Béisbol", 6:"Cricket", 7:"Motor",
+  8:"Rugby", 9:"Fútbol Americano", 10:"Fútbol Australiano", 11:"Hockey",
+  12:"Bádminton", 13:"Voleibol", 14:"Combate", 15:"Ciclismo", 16:"Balonmano",
+  17:"Golf", 18:"Dardos", 19:"Atletismo",
+};
+function sportName(sport) { return SPORT_NAME[sport] || "Otros"; }
+function sportCat(sport) { return SPORT_NAME[sport] ? String(sport) : "otros"; }
 
 // ─── Exports ─────────────────────────────────────────────────────────────────
 
@@ -239,45 +249,57 @@ export async function home() {
   }];
 }
 
-/** liveCategories(): categoría para la pestaña En Vivo nativa (Kino agrupa por categoryId). */
-export async function liveCategories() {
-  return [{ id: "deportes", title: "Deportes", genre: "deportes" }];
+/** Descarga y parsea la lista de partidos en vivo (match/live protobuf). */
+async function fetchMatches() {
+  const tokens = await fetchTokens();
+  const tokenLive = tokens["/api/match/live"];
+  if (!tokenLive) throw kino.error("unavailable", "no sfver token for match/live");
+
+  const url = `${DATA_EU}/sfver${tokenLive}/api/match/live?sportType=0&language=4&stream=true`;
+  const r = await kino.fetch(url, { headers: H_DATA });
+  if (!r.ok) throw kino.error("unavailable", `match/live ${r.status}`);
+
+  const data = pbData(bodyBytes(r));
+  if (!data) throw kino.error("unavailable", "match/live response invalid");
+
+  const matches = parseLive(data);
+  kino.log(`[rblive] ${matches.length} matches en vivo`);
+  return matches;
 }
 
-/** liveChannels(): devuelve la lista de partidos en vivo ahora mismo. */
+function matchToItem(m) {
+  const icon  = sportLabel(m.sport);
+  const title = m.title || `Match ${m.matchId}`;
+  return {
+    id:         `m${m.matchId}`,
+    ref:        matchWatchUrl(m),
+    title:      `${icon} ${title}`,
+    categoryId: sportCat(m.sport),
+  };
+}
+
+/** liveCategories(): una categoría por deporte presente en los partidos en vivo. */
+export async function liveCategories() {
+  const matches = await fetchMatches();
+  const seen = new Set();
+  const cats = [];
+  for (const m of matches) {
+    const id = sportCat(m.sport);
+    if (seen.has(id)) continue;
+    seen.add(id);
+    cats.push({ id, title: sportName(m.sport), genre: "deportes" });
+  }
+  return cats.length ? cats : [{ id: "otros", title: "Deportes", genre: "deportes" }];
+}
+
+/** liveChannels(): todos los partidos en vivo (Kino los agrupa por categoryId). */
 export async function liveChannels(cursor) {
   return liveChannelsImpl(cursor);
 }
 
 async function liveChannelsImpl(cursor) {
-  // 1. Tokens sfver
-  const tokens = await fetchTokens();
-  const tokenLive = tokens["/api/match/live"];
-  if (!tokenLive) throw kino.error("unavailable", "no sfver token for match/live");
-
-  // 2. match/live
-  const url = `${DATA_EU}/sfver${tokenLive}/api/match/live?sportType=0&language=4&stream=true`;
-  const r = await kino.fetch(url, { headers: H_DATA });
-  if (!r.ok) throw kino.error("unavailable", `match/live ${r.status}`);
-
-  const raw  = bodyBytes(r);
-  const data = pbData(raw);
-  if (!data) throw kino.error("unavailable", "match/live response invalid");
-
-  const matches = parseLive(data);
-  kino.log(`[rblive] ${matches.length} matches en vivo`);
-
-  const items = matches.slice(0, 80).map((m) => {
-    const icon  = sportLabel(m.sport);
-    const title = m.title || `Match ${m.matchId}`;
-    return {
-      id:         `m${m.matchId}`,
-      ref:        matchWatchUrl(m),
-      title:      `${icon} ${title}`,
-      categoryId: "deportes",
-    };
-  });
-
+  const matches = await fetchMatches();
+  const items = matches.slice(0, 120).map(matchToItem);
   if (!items.length) throw kino.error("unavailable", "no live matches right now");
   return { items };
 }
