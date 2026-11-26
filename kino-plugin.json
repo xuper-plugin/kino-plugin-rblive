@@ -1,8 +1,8 @@
 {
   "id": "rblive",
   "name": "RBLive Deportes",
-  "version": "0.6.1",
-  "apiVersion": 14,
+  "version": "0.7.0",
+  "apiVersion": 19,
   "entry": "plugin.js",
   "author": "xuper-plugin",
   "discoverable": false,
@@ -34,6 +34,6 @@
   },
   "signature": {
     "authorKey": "681128d1e13e1110d1745beb6eb521354ea3cafcbbb6649968b27c6c643b7993",
-    "value": "2032c8104e08e506e32cbee98b0de061a4f186d73f482ed600390554bf616002d2e3847495599df9d925c1133024a6253467cd249d83dc23d260870dfc53c404"
+    "value": "c81549f201c51bf93f3e03385b79d9a0408d7272d34bd231aa0312fcf7e342245c2f864a296a78f6393b48a989dc937306e95221c2e33bcd685cbc878107b70c"
   }
 }

@@ -400,47 +400,55 @@ function visibleItems(items, tab, q) {
   return list;
 }
 
-/** screen(): barra de búsqueda + tabs por deporte + grilla de partidos, con botón Actualizar. */
+/** screen(): Scaffold con AppBar fusionado a la barra de Kino (una sola barra), tabs en la barra,
+ *  botón Actualizar como acción, y el cuerpo con el buscador y la grilla. */
 export async function screen({ state }) {
   const s = state || {};
   const items = s.items;
   const tab = s.tab || "all";
   const q = s.q || "";
 
-  const children = [
-    { type: "Row", gap: 8, children: [
-      { type: "Text", text: "⚽ En Vivo", style: "h3", flex: 1 },
-      { type: "ElevatedButton", labelText: "Actualizar", icon: "refresh", onPressed: { event: "refresh" } },
-    ] },
-    { type: "TextField", key: "q", kind: "search", value: q, hint: "Buscar equipo o liga…",
-      onChanged: { event: "search" } },
-  ];
+  const appBar = {
+    type: "AppBar",
+    mergeWithKinoBar: true,
+    dense: true,
+    leading: { type: "IconButton", icon: "close", labelText: "Cerrar", onPressed: { go: { close: true } } },
+    title: "En Vivo",
+    actions: [
+      { type: "IconButton", icon: "refresh", labelText: "Actualizar", onPressed: { event: "refresh" } },
+    ],
+  };
 
+  const search = { type: "TextField", key: "q", kind: "search", value: q,
+    hint: "Buscar equipo o liga…", onChanged: { event: "search" } };
+
+  let body;
   if (items == null) {
-    children.push({ type: "CircularProgressIndicator", text: "Cargando…" });
-    return { type: "Column", padding: 12, gap: 12, children };
-  }
-
-  // tabs: Todos + un tab por deporte presente
-  const seen = new Set();
-  const tabs = [{ value: "all", label: "Todos" }];
-  for (const it of items) {
-    if (seen.has(it.cat)) continue;
-    seen.add(it.cat);
-    tabs.push({ value: it.cat, label: it.catName });
-  }
-  if (tabs.length > 2) {
-    children.push({ type: "TabBar", tabs, value: tabs.some((t) => t.value === tab) ? tab : "all",
-      onChanged: { event: "tab" } });
-  }
-
-  const vis = visibleItems(items, tab, q);
-  if (!vis.length) {
-    children.push({ type: "emptyState", title: q ? "Sin resultados" : "Sin partidos en vivo", icon: "live" });
+    body = { type: "Column", padding: 12, gap: 12, children: [search, { type: "CircularProgressIndicator", text: "Cargando…" }] };
   } else {
-    children.push({ type: "titleGrid", items: vis.map((it) => ({ id: it.id, ref: it.ref, title: it.title, kind: "live" })), columns: 3 });
+    // tabs por deporte presente → en el bottom del AppBar
+    const seen = new Set();
+    const tabs = [{ value: "all", label: "Todos" }];
+    for (const it of items) {
+      if (seen.has(it.cat)) continue;
+      seen.add(it.cat);
+      tabs.push({ value: it.cat, label: it.catName });
+    }
+    if (tabs.length > 2) {
+      appBar.bottom = { type: "TabBar", tabs, value: tabs.some((t) => t.value === tab) ? tab : "all", onChanged: { event: "tab" } };
+    }
+
+    const vis = visibleItems(items, tab, q);
+    const children = [search];
+    if (!vis.length) {
+      children.push({ type: "emptyState", title: q ? "Sin resultados" : "Sin partidos en vivo", icon: "live" });
+    } else {
+      children.push({ type: "titleGrid", items: vis.map((it) => ({ id: it.id, ref: it.ref, title: it.title, kind: "live", poster: it.poster })), columns: 3 });
+    }
+    body = { type: "Column", padding: 12, gap: 12, children };
   }
-  return { type: "Column", padding: 12, gap: 12, children };
+
+  return { type: "Scaffold", appBar, body };
 }
 
 /**
