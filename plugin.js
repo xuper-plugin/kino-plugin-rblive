@@ -259,13 +259,23 @@ const SPORT_COLOR = {
   8:"b45309", 9:"9333ea", 10:"a16207", 11:"2563eb", 12:"db2777", 13:"0d9488",
   14:"be123c", 15:"0284c7", 16:"ca8a04", 17:"15803d", 18:"78350f", 19:"4f46e5",
 };
+/** Acorta un texto con … para que el placeholder lo muestre grande y parejo. */
+function shortText(str, max) {
+  str = String(str).trim();
+  return str.length > max ? str.slice(0, max - 1).trim() + "…" : str;
+}
+
 /**
- * Imagen de tarjeta: placa de color (por deporte) con el TÍTULO del partido (equipos),
- * para que se lea completo aunque el texto de abajo se corte. Host público que sí carga.
+ * Imagen de tarjeta: placa de color (por deporte) con el TÍTULO del partido (equipos), en líneas
+ * cortas para que se lea grande. El nombre completo igual aparece debajo de la tarjeta.
  */
 function matchImage(m) {
   const bg = SPORT_COLOR[m.sport] || "334155";
-  let text = (m.title || sportName(m.sport)).slice(0, 72).replace(/\s+vs\s+/i, "\nvs\n");
+  const raw = m.title || sportName(m.sport);
+  const vs = raw.split(/\s+vs\s+/i);
+  const text = vs.length === 2
+    ? `${shortText(vs[0], 16)}\nvs\n${shortText(vs[1], 16)}`
+    : shortText(raw, 22);
   return `https://placehold.co/400x600/${bg}/ffffff/png?text=${encodeURIComponent(text)}`;
 }
 
