@@ -259,10 +259,14 @@ const SPORT_COLOR = {
   8:"b45309", 9:"9333ea", 10:"a16207", 11:"2563eb", 12:"db2777", 13:"0d9488",
   14:"be123c", 15:"0284c7", 16:"ca8a04", 17:"15803d", 18:"78350f", 19:"4f46e5",
 };
-/** Imagen genérica de tarjeta: una placa de color con el nombre del deporte (host público que sí carga). */
-function sportImage(sport) {
-  const bg = SPORT_COLOR[sport] || "334155";
-  return `https://placehold.co/400x600/${bg}/ffffff/png?text=${encodeURIComponent(sportName(sport))}`;
+/**
+ * Imagen de tarjeta: placa de color (por deporte) con el TÍTULO del partido (equipos),
+ * para que se lea completo aunque el texto de abajo se corte. Host público que sí carga.
+ */
+function matchImage(m) {
+  const bg = SPORT_COLOR[m.sport] || "334155";
+  let text = (m.title || sportName(m.sport)).slice(0, 72).replace(/\s+vs\s+/i, "\nvs\n");
+  return `https://placehold.co/400x600/${bg}/ffffff/png?text=${encodeURIComponent(text)}`;
 }
 
 // ─── Exports ─────────────────────────────────────────────────────────────────
@@ -328,7 +332,7 @@ function matchToItem(m) {
     ref:        matchWatchUrl(m),
     title:      `${icon} ${title}`,
     categoryId: sportCat(m.sport),
-    logo:       sportImage(m.sport),
+    logo:       matchImage(m),
   };
 }
 
